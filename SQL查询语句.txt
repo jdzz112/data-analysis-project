@@ -1,0 +1,64 @@
+WITH TOMONEY AS(SELECT *, UnitPrice*Quantity*(1-Discount) AS total_money
+FROM OrderDetails)
+SELECT c.Country, SUM(T.total_money)
+FROM Customers c
+JOIN Orders o
+ON c.CustomerID=o.CustomerID
+JOIN TOMONEY T
+ON o.OrderID=T.OrderID
+GROUP BY 1
+ORDER BY 2 DESC;
+
+
+SELECT c.categoryName, SUM(T.money) AS sum_money
+FROM Categories c
+JOIN Products p
+ON c.categoryID=p.categoryID
+JOIN  ((SELECT ProductID, UnitPrice*Quantity*(1-Discount) AS money
+FROM OrderDetails) T1)T
+ON p.ProductID=T.ProductID
+GROUP BY 1
+ORDER BY 2 DESC;
+
+
+select c.CategoryNAme,TT1.or_date,SUM(T2.money) sum_money
+FROM Categories c
+JOIN Products p
+ON c.categoryID=p.categoryID
+JOIN (select *,Unitprice*quantity*(1-discount) money
+From OrderDetails) T2
+ON p.productID=T2.productID
+JOIN (SELECT *,strftime('%Y-%m',T1.orderdate) or_date
+FROM (SELECT * FROM Orders WHERE orderDate>'2014-07-31' and orderDate <'2016-05-01')T1)TT1
+ON TT1.orderID=T2.orderID
+GROUP BY 1,2
+
+WITH temp AS (select s.companyname,p.categoryid,o.unitprice*o.quantity*(1-o.discount) money
+FROM Suppliers s JOIN Products p ON s.supplierid=p.supplierid
+JOIN OrderDetails o ON o.productid=p.productid)
+select sub.Categoryname,temp.companyname,temp.money
+FROM temp JOIN 
+(select c.categoryid,c.categoryname,max( temp.money) max_money
+FROM Categories c JOIN temp ON c.Categoryid=temp.Categoryid
+GROUP BY 1 ) sub ON temp.Categoryid=sub.Categoryid and temp.money=sub.max_money
+
+
+with temp1 AS (SELECT c.categoryName, SUM(T.money) AS sum_money
+FROM Categories c
+JOIN Products p
+ON c.categoryID=p.categoryID
+JOIN  ((SELECT ProductID, UnitPrice*Quantity*(1-Discount) AS money
+FROM OrderDetails) T1)T
+ON p.ProductID=T.ProductID
+GROUP BY 1
+ORDER BY 2 DESC),temp2 AS ( WITH temp AS (select s.companyname,p.categoryid,o.unitprice*o.quantity*(1-o.discount) money
+FROM Suppliers s JOIN Products p ON s.supplierid=p.supplierid
+JOIN OrderDetails o ON o.productid=p.productid)
+select sub.Categoryname,temp.companyname,temp.money
+FROM temp JOIN 
+(select c.categoryid,c.categoryname,max( temp.money) max_money
+FROM Categories c JOIN temp ON c.Categoryid=temp.Categoryid
+GROUP BY 1 ) sub ON temp.Categoryid=sub.Categoryid and temp.money=sub.max_money)
+select temp1.categoryName cate_name,temp1.sum_money to_money ,temp2.companyname com_name,temp2.money com_money,temp2.money/temp1.sum_money*100 AS percentage
+FROM temp1
+JOIN temp2 ON temp1.categoryName=temp2.categoryName
